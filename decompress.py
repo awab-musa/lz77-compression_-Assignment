@@ -1,40 +1,45 @@
-import re
-
-UNESCAPES = {'\\\\': '\\', '\\n': '\n', '\\r': '\r'}
-TAG_PATTERN = re.compile(r'^<(\d+),(\d+),(.*)>$')
-
-
-def read_tags(path='file2.txt'):
+def read_tags(file_name):
     tags = []
-    with open(path, 'r', encoding='utf-8', newline='') as f:
-        content = f.read()
-    for line in content.split('\n'):
-        line = line.rstrip('\r')
+    file = open(file_name, 'r', encoding='utf-8')
+
+    for line in file:
+        line = line.rstrip('\n')
         if line == '':
             continue
-        match = TAG_PATTERN.match(line)
-        if match is None:
-            raise ValueError('Invalid tag: ' + line)
-        off = int(match.group(1))
-        length = int(match.group(2))
-        ch = UNESCAPES.get(match.group(3), match.group(3))
-        tags.append((off, length, ch))
+
+        inside = line[1:-1]
+        parts = inside.split(',', 2)
+
+        offset = int(parts[0])
+        length = int(parts[1])
+        char = parts[2]
+
+        tags.append((offset, length, char))
+
+    file.close()
     return tags
 
 
 def lz77_decompress(tags):
-    out = []
-    for off, length, ch in tags:
-        start = len(out) - off
+    text = ''
+
+    for offset, length, char in tags:
+        start = len(text) - offset
+
         for k in range(length):
-            out.append(out[start + k])
-        out.append(ch)
-    return ''.join(out)
+            text = text + text[start + k]
+
+        text = text + char
+
+    return text
 
 
-def decompress_file(src='file2.txt', dst='file3.txt'):
-    tags = read_tags(src)
+def decompress_file(input_name, output_name):
+    tags = read_tags(input_name)
     text = lz77_decompress(tags)
-    with open(dst, 'w', encoding='utf-8', newline='') as f:
-        f.write(text)
+
+    file = open(output_name, 'w', encoding='utf-8')
+    file.write(text)
+    file.close()
+
     return text
